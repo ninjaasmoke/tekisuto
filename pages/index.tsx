@@ -44,6 +44,21 @@ const IndexPage: React.FC = () => {
     <div className='container'>
       <Head>
         <title>Text File Writer</title>
+        <meta name="title" content="Text File Writer" />
+        <meta name="description" content="simply, writes txt files" />
+
+        <meta property="og:type" content="website" />
+        <meta property="og:url" content="https://tekisuto.nithin.cloud/" />
+        <meta property="og:title" content="Text File Writer" />
+        <meta property="og:description" content="simply, writes txt files" />
+        <meta property="og:image" content="https://i.ibb.co/rcHrnWt/undraw-text-files-au1q.png" />
+
+        <meta property="twitter:card" content="summary_large_image" />
+        <meta property="twitter:url" content="https://tekisuto.nithin.cloud/" />
+        <meta property="twitter:title" content="Text File Writer" />
+        <meta property="twitter:description" content="simply, writes txt files" />
+        <meta property="twitter:image" content="https://i.ibb.co/rcHrnWt/undraw-text-files-au1q.png" />
+
       </Head>
       <input
         type="text"
