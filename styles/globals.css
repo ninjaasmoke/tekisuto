@@ -1,20 +1,20 @@
 :root {
-  --color-bg: black;
+  --color-bg: #0d1117;
   --color-text: white;
   --color-accent: #4caf50;
   --colot-accent-hover: #45a049;
 }
 
 * {
-  font-family: 'Fira Code', monospace;
-  font-size: 12px;
+  font-family: 'DM Mono', monospace;
+  font-size: 13px;
   box-sizing: border-box;
 }
 
 body {
   max-width: 880px;
   margin: 0 auto;
-  background-color: vaR(--color-bg);
+  background-color: var(--color-bg);
   color: var(--color-text);
   padding: 0 20px;
 }
@@ -26,6 +26,8 @@ textarea {
   outline: none;
   border: none;
   padding: 10px 12px;
+
+  border-radius: 4px;
 }
 
 textarea {
@@ -40,6 +42,9 @@ button {
   cursor: pointer;
   padding: 10px 12px;
   text-align: center;
+  color: white;
+
+  border-radius: 4px;
 }
 
 button:hover {

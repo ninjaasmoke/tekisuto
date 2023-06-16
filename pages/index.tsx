@@ -59,6 +59,8 @@ const IndexPage: React.FC = () => {
         <meta property="twitter:description" content="simply, writes txt files" />
         <meta property="twitter:image" content="https://i.ibb.co/rcHrnWt/undraw-text-files-au1q.png" />
 
+        <meta name="theme-color" content="#efefef" />
+
       </Head>
       <input
         type="text"
