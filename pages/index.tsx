@@ -13,9 +13,27 @@ const LOGO = `%c
                                   
 `
 
+function parseJSONStrings(obj: any): any {
+  if (typeof obj === 'object' && obj !== null) {
+    for (const key in obj) {
+      if (typeof obj[key] === 'string') {
+        try {
+          obj[key] = JSON.parse(obj[key]);
+        } catch (error) {
+          obj[key] = obj[key];
+        }
+      } else {
+        obj[key] = parseJSONStrings(obj[key]);
+      }
+    }
+  }
+  return obj;
+}
+
+
 const IndexPage: React.FC = () => {
   const [text, setText] = useState('');
-  const [fileName, setFileName] = useState<string | undefined>();
+  const [fileName, setFileName] = useState<string | undefined>('');
 
   useEffect(() => {
     console.log(LOGO, 'background: #000; color: #4caf50')
@@ -31,6 +49,38 @@ const IndexPage: React.FC = () => {
     element.click();
     document.body.removeChild(element);
   };
+
+  const saveFileJson = () => {
+    const json = JSON.parse(text);
+    const parsedObject = JSON.stringify(parseJSONStrings(json));
+
+    const element = document.createElement('a');
+    const file = new Blob([parsedObject], { type: 'application/json' });
+    element.href = URL.createObjectURL(file);
+    element.download = fileName ? `${fileName}.json` : 'file.json';
+    document.body.appendChild(element);
+    element.click();
+    document.body.removeChild(element);
+  };
+
+  const saveFileCSV = () => {
+    let csv = '';
+    text.split('\n').forEach((row) => {
+      const values = row.split(',');
+      const line = values.map((value) => `"${value}"`).join(',');
+      csv += line + '\n';
+    });
+
+    const element = document.createElement('a');
+    const file = new Blob([csv], { type: 'text/csv' });
+    element.href = URL.createObjectURL(file);
+    element.download = fileName ? `${fileName}.csv` : 'file.csv';
+    document.body.appendChild(element);
+    element.click();
+    document.body.removeChild(element);
+  };
+
+
 
   const handleInputChange = (event: React.ChangeEvent<HTMLTextAreaElement>) => {
     setText(event.target.value);
@@ -73,9 +123,13 @@ const IndexPage: React.FC = () => {
         id="textContent"
         value={text}
         onChange={handleInputChange}
-        placeholder="Enter text content"
+        placeholder="Enter content"
       />
-      <button onClick={saveFile} disabled={!text}>Save</button>
+      <div className='buttons'>
+        <button onClick={saveFile} disabled={!text}>Save</button>
+        <button onClick={saveFileJson} disabled={!text}>Save as parsed JSON</button>
+        <button onClick={saveFileCSV} disabled={!text}>Save as CSV</button>
+      </div>
     </div>
   );
 };
