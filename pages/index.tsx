@@ -117,12 +117,7 @@ export default function IndexPage() {
 
   const stats = useMemo(() => {
     const words = text.trim() ? text.trim().split(/\s+/).length : 0;
-    return {
-      characters: text.length,
-      words,
-      lines: text ? text.split('\n').length : 1,
-      bytes: new Blob([text]).size,
-    };
+    return { words };
   }, [text]);
 
   const matches = useMemo(() => {
@@ -467,16 +462,13 @@ export default function IndexPage() {
         <footer className="statusbar">
           <div className="status-group">
             <span className={`save-state${dirty ? ' unsaved' : ''}`}><i />{dirty ? 'Unsaved changes' : 'Saved'}</span>
-            <span>{draftSynced ? 'Draft safe' : 'Saving draft…'}</span>
+            {!draftSynced && <span>Saving draft…</span>}
             {message && <span className="message" role="status">{message}</span>}
           </div>
           <div className="status-group editor-stats">
             <span>Ln {cursor.line}, Col {cursor.column}</span>
             {cursor.selected > 0 && <span>{cursor.selected} selected</span>}
             <span>{stats.words} words</span>
-            <span>{stats.characters} chars</span>
-            <span>{stats.lines} lines</span>
-            <span>{stats.bytes < 1024 ? `${stats.bytes} B` : `${(stats.bytes / 1024).toFixed(1)} KB`}</span>
           </div>
         </footer>
 
