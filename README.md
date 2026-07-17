@@ -21,6 +21,8 @@ A fast, private browser-based text editor for opening, editing, and saving local
 
 ## Development
 
+Node.js 24 is required.
+
 Install dependencies and start the development server:
 
 ```bash
