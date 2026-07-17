@@ -379,7 +379,6 @@ export default function IndexPage() {
       >
         <header className="topbar">
           <a className="brand" href="#" aria-label="Tekisuto home">
-            <span className="brand-mark" aria-hidden="true">T</span>
             <span>tekisuto</span>
           </a>
           <div className="file-controls">

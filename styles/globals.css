@@ -1,31 +1,31 @@
 :root {
   color-scheme: dark;
-  --canvas: #111210;
-  --surface: #191a17;
-  --surface-raised: #22231f;
-  --editor: #151613;
-  --text: #eeede7;
-  --muted: #97988f;
-  --faint: #686a63;
-  --border: #30312c;
-  --accent: #d5ff5f;
-  --accent-ink: #202600;
-  --danger: #ff8b7b;
+  --canvas: #151515;
+  --surface: #181818;
+  --surface-raised: #222;
+  --editor: #1c1c1c;
+  --text: #e8e8e8;
+  --muted: #999;
+  --faint: #666;
+  --border: #303030;
+  --accent: #ededed;
+  --accent-ink: #181818;
+  --danger: #d9796f;
 }
 
 :root[data-theme='light'] {
   color-scheme: light;
-  --canvas: #e8e4db;
-  --surface: #f5f2eb;
-  --surface-raised: #fffdf8;
-  --editor: #fbf9f4;
-  --text: #22231f;
-  --muted: #6f7069;
-  --faint: #96978f;
-  --border: #d3d0c7;
-  --accent: #536e00;
-  --accent-ink: #f8ffe1;
-  --danger: #b42c1d;
+  --canvas: #f5f5f5;
+  --surface: #fafafa;
+  --surface-raised: #f2f2f2;
+  --editor: #fff;
+  --text: #202020;
+  --muted: #757575;
+  --faint: #aaa;
+  --border: #dedede;
+  --accent: #262626;
+  --accent-ink: #fff;
+  --danger: #b84338;
 }
 
 * {
@@ -79,36 +79,22 @@ summary:focus-visible {
 }
 
 .topbar {
-  min-height: 50px;
+  min-height: 44px;
   display: flex;
   align-items: center;
-  gap: 14px;
-  padding: 6px 10px 6px 14px;
+  gap: 12px;
+  padding: 5px 8px 5px 12px;
   border-bottom: 1px solid var(--border);
 }
 
 .brand {
   display: inline-flex;
   align-items: center;
-  gap: 8px;
   color: var(--text);
-  font-size: 13px;
-  font-weight: 700;
-  letter-spacing: .04em;
+  font-size: 12px;
+  font-weight: 650;
+  letter-spacing: .02em;
   text-decoration: none;
-}
-
-.brand-mark {
-  width: 24px;
-  height: 24px;
-  display: grid;
-  place-items: center;
-  background: var(--accent);
-  color: var(--accent-ink);
-  border-radius: 5px 5px 5px 2px;
-  font-family: "SFMono-Regular", Consolas, monospace;
-  font-size: 14px;
-  font-weight: 900;
 }
 
 .file-controls {
@@ -121,16 +107,16 @@ summary:focus-visible {
 .filename,
 select,
 .findbar input {
-  height: 32px;
+  height: 30px;
   background: transparent;
   border: 1px solid transparent;
   border-radius: 6px;
 }
 
 .filename {
-  width: min(270px, 28vw);
-  padding: 0 9px;
-  font-weight: 600;
+  width: min(240px, 28vw);
+  padding: 0 7px;
+  font-weight: 500;
 }
 
 .filename:hover,
@@ -140,7 +126,7 @@ select,
 }
 
 select {
-  padding: 0 28px 0 9px;
+  padding: 0 24px 0 7px;
   color: var(--muted);
 }
 
@@ -159,12 +145,12 @@ select:hover {
 .button,
 .theme-toggle,
 .findbar button {
-  min-height: 32px;
-  padding: 0 11px;
+  min-height: 30px;
+  padding: 0 9px;
   background: transparent;
   border: 1px solid transparent;
-  border-radius: 7px;
-  font-weight: 650;
+  border-radius: 5px;
+  font-weight: 600;
 }
 
 .button.ghost:hover,
@@ -175,7 +161,7 @@ select:hover {
 }
 
 .button.primary {
-  min-width: 64px;
+  min-width: 56px;
   background: var(--accent);
   color: var(--accent-ink);
 }
@@ -185,10 +171,10 @@ select:hover {
 }
 
 .theme-toggle {
-  width: 32px;
+  width: 30px;
   padding: 0;
   color: var(--muted);
-  font-size: 18px;
+  font-size: 16px;
 }
 
 .more-menu {
@@ -216,7 +202,6 @@ select:hover {
   background: var(--surface-raised);
   border: 1px solid var(--border);
   border-radius: 9px;
-  box-shadow: var(--shadow);
 }
 
 .menu-panel button {
@@ -237,7 +222,7 @@ select:hover {
   align-items: center;
   justify-content: flex-end;
   gap: 5px;
-  padding: 8px 12px;
+  padding: 5px 8px;
   background: var(--surface-raised);
   border-bottom: 1px solid var(--border);
 }
@@ -273,15 +258,15 @@ select:hover {
   height: 100%;
   display: block;
   resize: none;
-  padding: clamp(24px, 4vw, 48px) clamp(20px, 6vw, 80px);
+  padding: 18px 20px;
   background: var(--editor);
   border: 0;
   outline: 0;
   color: var(--text);
   caret-color: var(--accent);
   font-family: "SFMono-Regular", "Cascadia Code", "Roboto Mono", Consolas, monospace;
-  font-size: clamp(15px, 1.1vw, 17px);
-  line-height: 1.65;
+  font-size: 15px;
+  line-height: 1.6;
   tab-size: 2;
 }
 
@@ -291,7 +276,7 @@ select:hover {
 
 .drop-zone {
   position: absolute;
-  inset: 14px;
+  inset: 8px;
   display: grid;
   place-items: center;
   background: color-mix(in srgb, var(--editor) 88%, transparent);
@@ -304,16 +289,16 @@ select:hover {
 }
 
 .statusbar {
-  min-height: 26px;
+  min-height: 22px;
   display: flex;
   align-items: center;
   justify-content: space-between;
   gap: 10px;
-  padding: 0 10px;
+  padding: 0 8px;
   border-top: 1px solid var(--border);
   color: var(--muted);
   font-family: "SFMono-Regular", Consolas, monospace;
-  font-size: 11px;
+  font-size: 10px;
   white-space: nowrap;
 }
 
@@ -365,9 +350,9 @@ select:hover {
   }
 
   .topbar {
-    min-height: 48px;
-    gap: 9px;
-    padding: 8px 10px;
+    min-height: 44px;
+    gap: 7px;
+    padding: 5px 7px;
   }
 
   .brand span:last-child,
@@ -410,7 +395,7 @@ select:hover {
   }
 
   .editor {
-    padding: 26px 20px;
+    padding: 14px;
     font-size: 15px;
   }
 
@@ -419,8 +404,8 @@ select:hover {
   }
 
   .statusbar {
-    min-height: 24px;
-    padding: 0 8px;
+    min-height: 22px;
+    padding: 0 6px;
   }
 }
 
