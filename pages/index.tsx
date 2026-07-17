@@ -368,7 +368,7 @@ export default function IndexPage() {
       <Head>
         <title>{dirty ? '● ' : ''}{fileName} — Tekisuto</title>
         <meta name="description" content="A fast, private text editor that keeps your files in your browser." />
-        <meta name="theme-color" content={theme === 'dark' ? '#111210' : '#ffffff'} />
+        <meta name="theme-color" content={theme === 'dark' ? '#222222' : '#fbfbfd'} />
       </Head>
       <main
         className={`app-shell${isDragging ? ' is-dragging' : ''}`}

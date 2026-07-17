@@ -1,31 +1,31 @@
 :root {
   color-scheme: dark;
-  --canvas: #111210;
-  --surface: #191a17;
-  --surface-raised: #22231f;
-  --text: #eeede7;
-  --muted: #97988f;
-  --faint: #686a63;
-  --border: #30312c;
-  --accent: #d5ff5f;
-  --accent-hover: #e0ff87;
-  --accent-ink: #202600;
-  --danger: #d77b72;
+  --canvas: #222222;
+  --surface: #222222;
+  --surface-raised: #328336;
+  --text: #fbfbfd;
+  --muted: #b2e05b;
+  --faint: #64cc4f;
+  --border: #328336;
+  --accent: #64cc4f;
+  --accent-hover: #b2e05b;
+  --accent-ink: #222222;
+  --danger: #b2e05b;
 }
 
 :root[data-theme='light'] {
   color-scheme: light;
-  --canvas: #fff;
-  --surface: #fff;
-  --surface-raised: #f2f2f2;
-  --text: #1d1d1f;
-  --muted: #6e6e73;
-  --faint: #a1a1a6;
-  --border: rgba(0, 0, 0, .09);
-  --accent: #536e00;
-  --accent-hover: #405600;
-  --accent-ink: #f8ffe1;
-  --danger: #b84338;
+  --canvas: #fbfbfd;
+  --surface: #fbfbfd;
+  --surface-raised: #b2e05b;
+  --text: #222222;
+  --muted: #328336;
+  --faint: #64cc4f;
+  --border: #328336;
+  --accent: #328336;
+  --accent-hover: #64cc4f;
+  --accent-ink: #fbfbfd;
+  --danger: #328336;
 }
 
 * {
@@ -114,7 +114,7 @@ summary:focus-visible {
 select,
 .findbar input {
   height: 30px;
-  background: transparent;
+  background: none;
   border: 0;
   border-radius: 5px;
 }
@@ -151,7 +151,7 @@ select:hover {
 .findbar button {
   min-height: 30px;
   padding: 0 10px;
-  background: transparent;
+  background: none;
   border: 0;
   border-radius: 5px;
   color: var(--muted);
@@ -211,13 +211,13 @@ select:hover {
   background: var(--surface);
   border: 1px solid var(--border);
   border-radius: 7px;
-  box-shadow: 0 14px 35px rgba(0, 0, 0, .24);
+  box-shadow: 0 14px 35px #222222;
 }
 
 .menu-panel button {
   width: 100%;
   padding: 9px 10px;
-  background: transparent;
+  background: none;
   border: 0;
   border-radius: 5px;
   text-align: left;
@@ -225,7 +225,7 @@ select:hover {
 }
 
 .menu-panel button:hover {
-  background: color-mix(in srgb, var(--accent) 12%, transparent);
+  background: var(--surface-raised);
 }
 
 .menu-panel button:disabled {
@@ -233,7 +233,7 @@ select:hover {
 }
 
 .menu-panel button:disabled:hover {
-  background: transparent;
+  background: none;
 }
 
 .findbar {
@@ -303,7 +303,7 @@ select:hover {
   inset: 8px;
   display: grid;
   place-items: center;
-  background: color-mix(in srgb, var(--surface) 92%, transparent);
+  background: var(--surface);
   border: 1px dashed var(--accent);
   border-radius: 7px;
   color: var(--accent);
