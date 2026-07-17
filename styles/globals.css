@@ -1,75 +1,449 @@
 :root {
-  --color-bg: #0d1117;
-  --color-text: white;
-  --color-accent: #4caf50;
-  --colot-accent-hover: #45a049;
+  color-scheme: dark;
+  --canvas: #000000;
+  --surface: #000000;
+  --surface-raised: #1c1c1e;
+  --text: #f5f5f7;
+  --muted: #a1a1a6;
+  --faint: #6e6e73;
+  --border: #2c2c2e;
+  --accent: #0a84ff;
+  --accent-hover: #409cff;
+  --accent-ink: #ffffff;
+  --danger: #ff9f0a;
+}
+
+:root[data-theme='light'] {
+  color-scheme: light;
+  --canvas: #ffffff;
+  --surface: #ffffff;
+  --surface-raised: #f5f5f7;
+  --text: #1d1d1f;
+  --muted: #6e6e73;
+  --faint: #86868b;
+  --border: #d2d2d7;
+  --accent: #0071e3;
+  --accent-hover: #0077ed;
+  --accent-ink: #ffffff;
+  --danger: #bf4800;
 }
 
 * {
-  font-family: 'DM Mono', monospace;
-  font-size: 13px;
   box-sizing: border-box;
 }
 
-body {
-  max-width: 880px;
-  margin: 0 auto;
-  background-color: var(--color-bg);
-  color: var(--color-text);
-  padding: 0 20px;
-}
-
-input,
-textarea {
-  width: 100%;
-  resize: none;
-  outline: none;
-  border: none;
-  padding: 10px 12px;
-
-  border-radius: 4px;
-}
-
-textarea {
-  width: 100%;
+html,
+body,
+#__next {
   height: 100%;
+  margin: 0;
 }
 
-button {
-  all: unset;
-  background-color: var(--color-accent);
-  border: none;
+body {
+  overflow: hidden;
+  background: var(--canvas);
+  color: var(--text);
+  font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI", sans-serif;
+  font-size: 13px;
+}
+
+button,
+input,
+select,
+textarea {
+  color: inherit;
+  font: inherit;
+}
+
+button,
+select {
   cursor: pointer;
-  padding: 10px 12px;
-  text-align: center;
-  color: white;
-
-  border-radius: 4px;
-}
-
-button:hover {
-  background-color: var(--colot-accent-hover);
 }
 
 button:disabled {
-  background-color: gray;
+  cursor: default;
 }
 
-code {
-  color: var(--color-accent);
+button:focus-visible,
+input:focus-visible,
+select:focus-visible,
+textarea:focus-visible,
+summary:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
 }
 
-.container {
-  height: 100vh;
+.app-shell {
+  width: 100%;
+  height: 100%;
   display: flex;
   flex-direction: column;
-  align-items: stretch;
-  justify-content: center;
-  gap: 10px;
-  padding: 20px 0;
+  overflow: hidden;
+  background: var(--surface);
 }
 
-.buttons {
+.topbar {
+  flex: 0 0 auto;
+  min-height: 48px;
   display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 7px 8px 7px 14px;
+  border-bottom: 1px solid var(--border);
+}
+
+.brand {
+  display: inline-flex;
+  align-items: center;
+  color: var(--text);
+  font-family: "SFMono-Regular", "Cascadia Code", Consolas, monospace;
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: .08em;
+  text-decoration: none;
+}
+
+.file-controls {
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.filename,
+select,
+.findbar input {
+  height: 30px;
+  background: none;
+  border: 0;
+  border-radius: 5px;
+}
+
+.filename {
+  width: min(240px, 28vw);
+  padding: 0 8px;
+  font-weight: 500;
+}
+
+.filename:hover,
+.filename:focus {
+  background: var(--surface-raised);
+}
+
+select {
+  padding: 0 24px 0 7px;
+  color: var(--muted);
+}
+
+select:hover {
+  background-color: var(--surface-raised);
+}
+
+.actions {
+  margin-left: auto;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.button,
+.theme-toggle,
+.findbar button {
+  min-height: 30px;
+  padding: 0 10px;
+  background: none;
+  border: 0;
+  border-radius: 5px;
+  color: var(--muted);
+  font-weight: 550;
+}
+
+.button.ghost:hover,
+.theme-toggle:hover,
+.findbar button:hover {
+  background: var(--surface-raised);
+  color: var(--text);
+}
+
+.button.primary {
+  min-width: 56px;
+  background: var(--accent);
+  color: var(--accent-ink);
+}
+
+.button.primary:hover:not(:disabled) {
+  background: var(--accent-hover);
+}
+
+.button.primary:disabled {
+  background: var(--surface-raised);
+  color: var(--faint);
+}
+
+.theme-toggle {
+  width: 30px;
+  padding: 0;
+  font-size: 15px;
+}
+
+.more-menu {
+  position: relative;
+}
+
+.more-menu summary {
+  display: grid;
+  place-items: center;
+  list-style: none;
+  letter-spacing: .12em;
+}
+
+.more-menu summary::-webkit-details-marker {
+  display: none;
+}
+
+.menu-panel {
+  position: absolute;
+  z-index: 10;
+  top: calc(100% + 8px);
+  right: 0;
+  width: 190px;
+  padding: 6px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 7px;
+  box-shadow: 0 14px 35px rgb(0 0 0 / 45%);
+}
+
+.menu-panel button {
+  width: 100%;
+  padding: 9px 10px;
+  background: none;
+  border: 0;
+  border-radius: 5px;
+  text-align: left;
+  color: var(--text);
+}
+
+.menu-panel button:hover {
+  background: var(--surface-raised);
+}
+
+.menu-panel button:disabled {
+  color: var(--faint);
+}
+
+.menu-panel button:disabled:hover {
+  background: none;
+}
+
+.findbar {
+  flex: 0 0 auto;
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 5px;
+  padding: 5px 8px;
+  background: var(--surface);
+  border-bottom: 1px solid var(--border);
+}
+
+.findbar input {
+  width: 180px;
+  padding: 0 9px;
+  background: var(--surface-raised);
+}
+
+.findbar button {
+  min-height: 32px;
+  padding: 0 10px;
+  color: var(--muted);
+}
+
+.match-count {
+  min-width: 76px;
+  color: var(--muted);
+  font-size: 12px;
+  text-align: center;
+}
+
+.editor-wrap {
+  position: relative;
+  flex: 1 1 auto;
+  min-height: 0;
+  background-color: var(--surface);
+}
+
+.editor {
+  width: 100%;
+  height: 100%;
+  display: block;
+  resize: none;
+  padding: 24px 28px;
+  background: var(--surface);
+  border: 0;
+  outline: 0;
+  color: var(--text);
+  caret-color: var(--accent);
+  font-family: "SFMono-Regular", "Cascadia Code", "Roboto Mono", Consolas, monospace;
+  font-size: 14px;
+  line-height: 1.7;
+  tab-size: 2;
+}
+
+.editor:focus-visible {
+  outline: 0;
+}
+
+.editor::placeholder {
+  color: var(--faint);
+}
+
+.drop-zone {
+  position: absolute;
+  inset: 8px;
+  display: grid;
+  place-items: center;
+  background: var(--surface);
+  border: 1px dashed var(--accent);
+  border-radius: 7px;
+  color: var(--accent);
+  font-size: 18px;
+  font-weight: 700;
+  pointer-events: none;
+}
+
+.statusbar {
+  height: 28px;
+  flex: 0 0 28px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
   gap: 10px;
+  padding: 0 12px;
+  border-top: 1px solid var(--border);
+  color: var(--muted);
+  font-family: "SFMono-Regular", Consolas, monospace;
+  font-size: 10px;
+  line-height: 28px;
+  white-space: nowrap;
+  overflow: hidden;
+}
+
+.status-group {
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.save-state {
+  color: var(--muted);
+}
+
+.save-state i {
+  width: 5px;
+  height: 5px;
+  display: inline-block;
+  margin-right: 6px;
+  background: var(--faint);
+  border-radius: 50%;
+}
+
+.save-state.unsaved i {
+  background: var(--danger);
+}
+
+.message {
+  overflow: hidden;
+  color: var(--muted);
+  text-overflow: ellipsis;
+}
+
+.sr-only {
+  position: absolute !important;
+  width: 1px !important;
+  height: 1px !important;
+  padding: 0 !important;
+  overflow: hidden !important;
+  clip: rect(0, 0, 0, 0) !important;
+  white-space: nowrap !important;
+  border: 0 !important;
+}
+
+@media (max-width: 760px) {
+  .topbar {
+    min-height: 44px;
+    gap: 7px;
+    padding: 5px 7px;
+  }
+
+  .brand span:last-child,
+  .desktop-action,
+  .file-controls select {
+    display: none;
+  }
+
+  .file-controls {
+    flex: 1;
+  }
+
+  .filename {
+    width: 100%;
+  }
+
+  .button {
+    padding: 0 10px;
+  }
+
+  .button.primary {
+    min-width: 58px;
+  }
+
+  .theme-toggle {
+    display: none;
+  }
+
+  .findbar {
+    flex-wrap: wrap;
+    justify-content: stretch;
+  }
+
+  .findbar label {
+    flex: 1;
+  }
+
+  .findbar input {
+    width: 100%;
+  }
+
+  .editor {
+    padding: 18px;
+    font-size: 15px;
+  }
+
+  .status-group > span:nth-child(2) {
+    display: none;
+  }
+
+  .statusbar {
+    height: 28px;
+    padding: 0 6px;
+  }
+}
+
+@media (max-width: 440px) {
+  .actions > .button.ghost {
+    display: none;
+  }
+
+  .message,
+  .editor-stats span:not(:first-child) {
+    display: none;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  * {
+    scroll-behavior: auto !important;
+  }
 }
