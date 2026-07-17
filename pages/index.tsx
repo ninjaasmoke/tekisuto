@@ -114,6 +114,7 @@ export default function IndexPage() {
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const findInputRef = useRef<HTMLInputElement>(null);
+  const hasContent = text.length > 0;
 
   const stats = useMemo(() => {
     const words = text.trim() ? text.trim().split(/\s+/).length : 0;
@@ -167,6 +168,7 @@ export default function IndexPage() {
   }, [loadFile]);
 
   const save = useCallback(async (saveAs = false) => {
+    if (!text) return;
     const name = safeName(fileName, format);
     const mime = format === 'custom' ? 'text/plain' : FORMATS[format].mime;
     try {
@@ -366,7 +368,7 @@ export default function IndexPage() {
       <Head>
         <title>{dirty ? '● ' : ''}{fileName} — Tekisuto</title>
         <meta name="description" content="A fast, private text editor that keeps your files in your browser." />
-        <meta name="theme-color" content={theme === 'dark' ? '#171816' : '#f2efe8'} />
+        <meta name="theme-color" content={theme === 'dark' ? '#0d100e' : '#f1f3ef'} />
       </Head>
       <main
         className={`app-shell${isDragging ? ' is-dragging' : ''}`}
@@ -408,17 +410,17 @@ export default function IndexPage() {
               <summary className="button ghost" aria-label="More actions">•••</summary>
               <div className="menu-panel">
                 <button onClick={() => setFindOpen(true)}>Find &amp; replace</button>
-                <button onClick={() => void save(true)}>Save as…</button>
-                {format === 'json' && <button onClick={() => transformJson(2)}>Format JSON</button>}
-                {format === 'json' && <button onClick={() => transformJson()}>Minify JSON</button>}
-                {format === 'csv' && <button onClick={transformCsv}>Quote CSV fields</button>}
+                <button onClick={() => void save(true)} disabled={!hasContent}>Save as…</button>
+                {format === 'json' && <button onClick={() => transformJson(2)} disabled={!hasContent}>Format JSON</button>}
+                {format === 'json' && <button onClick={() => transformJson()} disabled={!hasContent}>Minify JSON</button>}
+                {format === 'csv' && <button onClick={transformCsv} disabled={!hasContent}>Quote CSV fields</button>}
                 <button onClick={clearDraft}>Clear draft</button>
               </div>
             </details>
             <button className="theme-toggle" onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')} aria-label={`Use ${theme === 'dark' ? 'light' : 'dark'} theme`}>
               {theme === 'dark' ? '☼' : '☾'}
             </button>
-            <button className="button primary" onClick={() => void save()} title="Save (Ctrl/⌘ S)">Save</button>
+            <button className="button primary" onClick={() => void save()} disabled={!hasContent} title="Save (Ctrl/⌘ S)">Save</button>
           </nav>
         </header>
 

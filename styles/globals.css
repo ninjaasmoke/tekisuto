@@ -1,29 +1,29 @@
 :root {
   color-scheme: dark;
-  --canvas: #151515;
-  --surface: #181818;
-  --surface-raised: #222;
-  --editor: #1c1c1c;
-  --text: #e8e8e8;
-  --muted: #999;
-  --faint: #666;
-  --border: #303030;
-  --accent: #ededed;
-  --accent-ink: #181818;
-  --danger: #d9796f;
+  --canvas: #0d100e;
+  --surface: #121513;
+  --surface-raised: #191d1a;
+  --text: #e6eae7;
+  --muted: #8c958f;
+  --faint: #5f6862;
+  --border: rgba(230, 234, 231, .09);
+  --accent: #66bd79;
+  --accent-hover: #75ca87;
+  --accent-ink: #08110a;
+  --danger: #d77b72;
 }
 
 :root[data-theme='light'] {
   color-scheme: light;
-  --canvas: #f5f5f5;
-  --surface: #fafafa;
-  --surface-raised: #f2f2f2;
-  --editor: #fff;
-  --text: #202020;
-  --muted: #757575;
-  --faint: #aaa;
-  --border: #dedede;
-  --accent: #262626;
+  --canvas: #f1f3ef;
+  --surface: #fafbf8;
+  --surface-raised: #f0f3ee;
+  --text: #202521;
+  --muted: #687169;
+  --faint: #9ba39c;
+  --border: rgba(32, 37, 33, .1);
+  --accent: #287a3c;
+  --accent-hover: #216b33;
   --accent-ink: #fff;
   --danger: #b84338;
 }
@@ -43,8 +43,8 @@ body {
   overflow: hidden;
   background: var(--canvas);
   color: var(--text);
-  font-family: Inter, ui-sans-serif, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
-  font-size: 14px;
+  font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI", sans-serif;
+  font-size: 13px;
 }
 
 button,
@@ -60,6 +60,10 @@ select {
   cursor: pointer;
 }
 
+button:disabled {
+  cursor: default;
+}
+
 button:focus-visible,
 input:focus-visible,
 select:focus-visible,
@@ -70,21 +74,25 @@ summary:focus-visible {
 }
 
 .app-shell {
-  width: 100%;
-  height: 100%;
+  width: min(960px, calc(100% - 32px));
+  height: calc(100% - 32px);
+  margin: 16px auto;
   display: flex;
   flex-direction: column;
   overflow: hidden;
   background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  box-shadow: 0 18px 60px rgba(0, 0, 0, .18);
 }
 
 .topbar {
   flex: 0 0 auto;
-  min-height: 44px;
+  min-height: 48px;
   display: flex;
   align-items: center;
-  gap: 12px;
-  padding: 5px 8px 5px 12px;
+  gap: 14px;
+  padding: 7px 8px 7px 14px;
   border-bottom: 1px solid var(--border);
 }
 
@@ -92,9 +100,10 @@ summary:focus-visible {
   display: inline-flex;
   align-items: center;
   color: var(--text);
-  font-size: 12px;
-  font-weight: 650;
-  letter-spacing: .02em;
+  font-family: "SFMono-Regular", "Cascadia Code", Consolas, monospace;
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: .08em;
   text-decoration: none;
 }
 
@@ -110,20 +119,19 @@ select,
 .findbar input {
   height: 30px;
   background: transparent;
-  border: 1px solid transparent;
-  border-radius: 6px;
+  border: 0;
+  border-radius: 5px;
 }
 
 .filename {
   width: min(240px, 28vw);
-  padding: 0 7px;
+  padding: 0 8px;
   font-weight: 500;
 }
 
 .filename:hover,
 .filename:focus {
   background: var(--surface-raised);
-  border-color: var(--border);
 }
 
 select {
@@ -133,7 +141,6 @@ select {
 
 select:hover {
   background-color: var(--surface-raised);
-  border-color: var(--border);
 }
 
 .actions {
@@ -147,18 +154,19 @@ select:hover {
 .theme-toggle,
 .findbar button {
   min-height: 30px;
-  padding: 0 9px;
+  padding: 0 10px;
   background: transparent;
-  border: 1px solid transparent;
+  border: 0;
   border-radius: 5px;
-  font-weight: 600;
+  color: var(--muted);
+  font-weight: 550;
 }
 
 .button.ghost:hover,
 .theme-toggle:hover,
 .findbar button:hover {
   background: var(--surface-raised);
-  border-color: var(--border);
+  color: var(--text);
 }
 
 .button.primary {
@@ -167,15 +175,19 @@ select:hover {
   color: var(--accent-ink);
 }
 
-.button.primary:hover {
-  filter: brightness(.94);
+.button.primary:hover:not(:disabled) {
+  background: var(--accent-hover);
+}
+
+.button.primary:disabled {
+  background: var(--surface-raised);
+  color: var(--faint);
 }
 
 .theme-toggle {
   width: 30px;
   padding: 0;
-  color: var(--muted);
-  font-size: 16px;
+  font-size: 15px;
 }
 
 .more-menu {
@@ -196,13 +208,14 @@ select:hover {
 .menu-panel {
   position: absolute;
   z-index: 10;
-  top: calc(100% + 9px);
+  top: calc(100% + 8px);
   right: 0;
   width: 190px;
   padding: 6px;
-  background: var(--surface-raised);
+  background: var(--surface);
   border: 1px solid var(--border);
-  border-radius: 9px;
+  border-radius: 7px;
+  box-shadow: 0 14px 35px rgba(0, 0, 0, .24);
 }
 
 .menu-panel button {
@@ -212,10 +225,19 @@ select:hover {
   border: 0;
   border-radius: 5px;
   text-align: left;
+  color: var(--text);
 }
 
 .menu-panel button:hover {
   background: color-mix(in srgb, var(--accent) 12%, transparent);
+}
+
+.menu-panel button:disabled {
+  color: var(--faint);
+}
+
+.menu-panel button:disabled:hover {
+  background: transparent;
 }
 
 .findbar {
@@ -225,15 +247,14 @@ select:hover {
   justify-content: flex-end;
   gap: 5px;
   padding: 5px 8px;
-  background: var(--surface-raised);
+  background: var(--surface);
   border-bottom: 1px solid var(--border);
 }
 
 .findbar input {
   width: 180px;
   padding: 0 9px;
-  background: var(--editor);
-  border-color: var(--border);
+  background: var(--surface-raised);
 }
 
 .findbar button {
@@ -253,7 +274,7 @@ select:hover {
   position: relative;
   flex: 1 1 auto;
   min-height: 0;
-  background-color: var(--editor);
+  background-color: var(--surface);
 }
 
 .editor {
@@ -261,15 +282,15 @@ select:hover {
   height: 100%;
   display: block;
   resize: none;
-  padding: 18px 20px;
-  background: var(--editor);
+  padding: 24px 28px;
+  background: var(--surface);
   border: 0;
   outline: 0;
   color: var(--text);
   caret-color: var(--accent);
   font-family: "SFMono-Regular", "Cascadia Code", "Roboto Mono", Consolas, monospace;
-  font-size: 15px;
-  line-height: 1.6;
+  font-size: 14px;
+  line-height: 1.7;
   tab-size: 2;
 }
 
@@ -282,9 +303,9 @@ select:hover {
   inset: 8px;
   display: grid;
   place-items: center;
-  background: color-mix(in srgb, var(--editor) 88%, transparent);
-  border: 2px dashed var(--accent);
-  border-radius: 10px;
+  background: color-mix(in srgb, var(--surface) 92%, transparent);
+  border: 1px dashed var(--accent);
+  border-radius: 7px;
   color: var(--accent);
   font-size: 18px;
   font-weight: 700;
@@ -292,18 +313,18 @@ select:hover {
 }
 
 .statusbar {
-  height: 22px;
-  flex: 0 0 22px;
+  height: 28px;
+  flex: 0 0 28px;
   display: flex;
   align-items: center;
   justify-content: space-between;
   gap: 10px;
-  padding: 0 8px;
+  padding: 0 12px;
   border-top: 1px solid var(--border);
   color: var(--muted);
   font-family: "SFMono-Regular", Consolas, monospace;
   font-size: 10px;
-  line-height: 22px;
+  line-height: 28px;
   white-space: nowrap;
   overflow: hidden;
 }
@@ -316,7 +337,7 @@ select:hover {
 }
 
 .save-state {
-  color: var(--text);
+  color: var(--muted);
 }
 
 .save-state i {
@@ -324,7 +345,7 @@ select:hover {
   height: 5px;
   display: inline-block;
   margin-right: 6px;
-  background: var(--accent);
+  background: var(--faint);
   border-radius: 50%;
 }
 
@@ -334,7 +355,7 @@ select:hover {
 
 .message {
   overflow: hidden;
-  color: var(--accent);
+  color: var(--muted);
   text-overflow: ellipsis;
 }
 
@@ -353,6 +374,10 @@ select:hover {
   .app-shell {
     width: 100%;
     height: 100%;
+    margin: 0;
+    border: 0;
+    border-radius: 0;
+    box-shadow: none;
   }
 
   .topbar {
@@ -401,7 +426,7 @@ select:hover {
   }
 
   .editor {
-    padding: 14px;
+    padding: 18px;
     font-size: 15px;
   }
 
@@ -410,7 +435,7 @@ select:hover {
   }
 
   .statusbar {
-    height: 22px;
+    height: 28px;
     padding: 0 6px;
   }
 }
