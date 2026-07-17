@@ -16,10 +16,10 @@ A fast, private browser-based text editor for opening, editing, and saving local
 
 - File contents are processed entirely in the browser; Tekisuto has no upload or API endpoint.
 - Opening and direct saving use browser-controlled file pickers, so access requires an explicit user action.
-- Unsaved drafts are stored only in this site&apos;s browser storage and can be removed with **Clear draft**.
+- Unsaved drafts are stored only in this site's browser storage and can be removed with **Clear draft**.
 - Production responses restrict scripts, network connections, framing, referrers, and sensitive browser permissions.
 
-Drafts are not encrypted. Anyone with access to the same browser profile, a privileged browser extension, or the site&apos;s local storage may be able to read them. Use **Clear draft** or a private browsing session on shared or untrusted devices.
+Drafts are not encrypted. Anyone with access to the same browser profile, a privileged browser extension, or the site's local storage may be able to read them. Use **Clear draft** or a private browsing session on shared or untrusted devices.
 
 ## Shortcuts
 
