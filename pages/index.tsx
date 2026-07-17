@@ -144,6 +144,7 @@ export default function IndexPage() {
   };
 
   const loadFile = useCallback(async (file: File, nextHandle: FileHandle | null = null) => {
+    if (dirty && !window.confirm('Discard unsaved changes and open another file?')) return;
     const contents = await file.text();
     setText(contents);
     setFileName(file.name);
@@ -151,9 +152,10 @@ export default function IndexPage() {
     setHandle(nextHandle);
     setDirty(false);
     setDraftSynced(true);
+    localStorage.removeItem(DRAFT_KEY);
     setMessage(`Opened ${file.name}`);
     requestAnimationFrame(() => textareaRef.current?.focus());
-  }, []);
+  }, [dirty]);
 
   const openFile = useCallback(async () => {
     try {
@@ -191,6 +193,8 @@ export default function IndexPage() {
         setFileName(name);
       }
       setDirty(false);
+      setDraftSynced(true);
+      localStorage.removeItem(DRAFT_KEY);
       setMessage(`Saved ${target?.name || name}`);
     } catch (error) {
       if ((error as DOMException).name !== 'AbortError') setMessage('Save failed. Your draft is still safe.');
@@ -283,6 +287,10 @@ export default function IndexPage() {
     return () => window.removeEventListener('beforeunload', warn);
   }, [dirty]);
 
+  useEffect(() => {
+    if (matchIndex >= matches.length) setMatchIndex(-1);
+  }, [matchIndex, matches.length]);
+
   const transformJson = (spaces?: number) => {
     try {
       const output = JSON.stringify(JSON.parse(text), null, spaces);
@@ -304,7 +312,11 @@ export default function IndexPage() {
 
   const replaceCurrent = () => {
     const editor = textareaRef.current;
-    if (!editor || editor.selectionStart === editor.selectionEnd || !find) return;
+    if (!editor || !find) return;
+    if (text.slice(editor.selectionStart, editor.selectionEnd) !== find) {
+      selectMatch(1);
+      return;
+    }
     const start = editor.selectionStart;
     markChanged(`${text.slice(0, start)}${replace}${text.slice(editor.selectionEnd)}`);
     requestAnimationFrame(() => editor.setSelectionRange(start, start + replace.length));
@@ -342,6 +354,7 @@ export default function IndexPage() {
   };
 
   const clearDraft = () => {
+    if (dirty && !window.confirm('Discard your unsaved changes and clear this draft?')) return;
     localStorage.removeItem(DRAFT_KEY);
     setText('');
     setFileName('untitled.txt');
@@ -421,7 +434,7 @@ export default function IndexPage() {
               <span className="sr-only">Find</span>
               <input ref={findInputRef} value={find} onChange={(event) => { setFind(event.target.value); setMatchIndex(-1); }} placeholder="Find" />
             </label>
-            <span className="match-count">{matches.length ? `${Math.max(matchIndex + 1, 1)} / ${matches.length}` : 'No matches'}</span>
+            <span className="match-count">{matches.length ? `${matchIndex >= 0 ? matchIndex + 1 : '—'} / ${matches.length}` : 'No matches'}</span>
             <button onClick={() => selectMatch(-1)} aria-label="Previous match">↑</button>
             <button onClick={() => selectMatch(1)} aria-label="Next match">↓</button>
             <label>
