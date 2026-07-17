@@ -290,6 +290,10 @@ select:hover {
   tab-size: 2;
 }
 
+.editor:focus-visible {
+  outline: 0;
+}
+
 .editor::placeholder {
   color: var(--faint);
 }
