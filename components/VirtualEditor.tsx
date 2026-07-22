@@ -1,4 +1,5 @@
 import {
+  ClipboardEvent,
   CSSProperties,
   FormEvent,
   KeyboardEvent,
@@ -19,6 +20,7 @@ import {
 } from '@/lib/jsonHighlight';
 
 const OVERSCAN = 8;
+const NATIVE_SELECT_ALL_LIMIT = 1024 * 1024;
 
 export type EditorHandle = {
   focus: () => void;
@@ -61,6 +63,7 @@ const VirtualEditorInner = forwardRef<EditorHandle, Props>(function VirtualEdito
   const startsRef = useRef(lineStarts(documentText));
   const pendingEdit = useRef<Edit | null>(null);
   const scrollFrameRef = useRef<number | null>(null);
+  const allSelectedRef = useRef(false);
   const metricsRef = useRef({ lineHeight: 23.8, characterWidth: 8.4 });
   const [viewport, setViewport] = useState<Viewport>({
     top: 0,
@@ -71,15 +74,16 @@ const VirtualEditorInner = forwardRef<EditorHandle, Props>(function VirtualEdito
     characterWidth: 8.4,
   });
   const [paintVersion, setPaintVersion] = useState(0);
+  const [allSelected, setAllSelected] = useState(false);
 
   useImperativeHandle(ref, () => ({
     focus: () => textareaRef.current?.focus(),
     getText: () => textRef.current,
-    get selectionStart() { return textareaRef.current?.selectionStart || 0; },
-    get selectionEnd() { return textareaRef.current?.selectionEnd || 0; },
+    get selectionStart() { return allSelectedRef.current ? 0 : textareaRef.current?.selectionStart || 0; },
+    get selectionEnd() { return allSelectedRef.current ? textRef.current.length : textareaRef.current?.selectionEnd || 0; },
     getCursor: () => {
-      const start = textareaRef.current?.selectionStart || 0;
-      const end = textareaRef.current?.selectionEnd || 0;
+      const start = allSelectedRef.current ? 0 : textareaRef.current?.selectionStart || 0;
+      const end = allSelectedRef.current ? textRef.current.length : textareaRef.current?.selectionEnd || 0;
       const lineIndex = lineIndexAtOffset(startsRef.current, start);
       return {
         line: lineIndex + 1,
@@ -87,7 +91,11 @@ const VirtualEditorInner = forwardRef<EditorHandle, Props>(function VirtualEdito
         selected: end - start,
       };
     },
-    setSelectionRange: (start, end) => textareaRef.current?.setSelectionRange(start, end),
+    setSelectionRange: (start, end) => {
+      allSelectedRef.current = false;
+      setAllSelected(false);
+      textareaRef.current?.setSelectionRange(start, end);
+    },
   }), []);
 
   useEffect(() => {
@@ -96,6 +104,8 @@ const VirtualEditorInner = forwardRef<EditorHandle, Props>(function VirtualEdito
     textarea.value = documentText;
     textRef.current = documentText;
     startsRef.current = lineStarts(documentText);
+    allSelectedRef.current = false;
+    setAllSelected(false);
     setPaintVersion((version) => version + 1);
   }, [documentText, documentVersion]);
 
@@ -168,9 +178,33 @@ const VirtualEditorInner = forwardRef<EditorHandle, Props>(function VirtualEdito
       startsRef.current = lineStarts(nextText);
     }
     pendingEdit.current = null;
+    allSelectedRef.current = false;
+    setAllSelected(false);
     textRef.current = nextText;
     setPaintVersion((version) => version + 1);
     onChange(nextText);
+  };
+
+  const replaceAllSelection = (replacement: string) => {
+    const textarea = textareaRef.current;
+    if (!textarea) return;
+    textarea.value = replacement;
+    textRef.current = replacement;
+    startsRef.current = lineStarts(replacement);
+    pendingEdit.current = null;
+    allSelectedRef.current = false;
+    setAllSelected(false);
+    textarea.setSelectionRange(replacement.length, replacement.length);
+    setPaintVersion((version) => version + 1);
+    onChange(replacement);
+    onSelect();
+  };
+
+  const handleClipboard = (event: ClipboardEvent<HTMLTextAreaElement>, cut: boolean) => {
+    if (!allSelectedRef.current) return;
+    event.preventDefault();
+    event.clipboardData.setData('text/plain', textRef.current);
+    if (cut) replaceAllSelection('');
   };
 
   const firstLine = Math.max(0, Math.floor(viewport.top / viewport.lineHeight) - OVERSCAN);
@@ -197,7 +231,7 @@ const VirtualEditorInner = forwardRef<EditorHandle, Props>(function VirtualEdito
   };
 
   return (
-    <div className={`virtual-editor${highlight ? ' is-highlighted' : ''}`}>
+    <div className={`virtual-editor${highlight ? ' is-highlighted' : ''}${allSelected ? ' is-all-selected' : ''}`}>
       {highlight && (
         <pre className="highlight-layer" style={overlayStyle} aria-hidden="true" data-paint={paintVersion}>
           {visibleLines.map((line, lineIndex) => (
@@ -220,15 +254,52 @@ const VirtualEditorInner = forwardRef<EditorHandle, Props>(function VirtualEdito
         aria-label="File contents"
         defaultValue={documentText}
         onBeforeInput={(event) => {
+          if (allSelectedRef.current) {
+            const input = event.nativeEvent as InputEvent;
+            let replacement: string | null = input.data;
+            if (input.inputType.startsWith('delete')) replacement = '';
+            else if (input.inputType === 'insertLineBreak' || input.inputType === 'insertParagraph') replacement = '\n';
+            if (replacement !== null) {
+              event.preventDefault();
+              replaceAllSelection(replacement);
+              return;
+            }
+          }
           pendingEdit.current = {
             start: event.currentTarget.selectionStart,
             end: event.currentTarget.selectionEnd,
           };
         }}
         onInput={handleInput}
-        onKeyDown={onKeyDown}
+        onKeyDown={(event) => {
+          if (
+            textRef.current.length > NATIVE_SELECT_ALL_LIMIT
+            && (event.ctrlKey || event.metaKey)
+            && event.key.toLowerCase() === 'a'
+          ) {
+            event.preventDefault();
+            allSelectedRef.current = true;
+            setAllSelected(true);
+            onSelect();
+            return;
+          }
+          onKeyDown(event);
+        }}
+        onCopy={(event) => handleClipboard(event, false)}
+        onCut={(event) => handleClipboard(event, true)}
+        onPaste={(event) => {
+          if (!allSelectedRef.current) return;
+          event.preventDefault();
+          replaceAllSelection(event.clipboardData.getData('text/plain'));
+        }}
         onSelect={onSelect}
-        onClick={onSelect}
+        onClick={() => {
+          if (allSelectedRef.current) {
+            allSelectedRef.current = false;
+            setAllSelected(false);
+          }
+          onSelect();
+        }}
         onScroll={measureViewport}
         placeholder="Start typing, or drop a file here…"
         autoFocus

@@ -309,6 +309,14 @@ select:hover {
   background: color-mix(in srgb, var(--accent) 35%, transparent);
 }
 
+.virtual-editor.is-all-selected .editor {
+  box-shadow: inset 0 0 0 2px color-mix(in srgb, var(--accent) 70%, transparent);
+}
+
+.virtual-editor.is-all-selected .highlight-line {
+  background: color-mix(in srgb, var(--accent) 25%, transparent);
+}
+
 .highlight-layer {
   position: absolute;
   z-index: 0;
