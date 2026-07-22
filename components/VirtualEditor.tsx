@@ -11,7 +11,12 @@ import {
   useRef,
   useState,
 } from 'react';
-import { lineStarts, tokenizeJsonLine, updateLineStarts } from '@/lib/jsonHighlight';
+import {
+  lineIndexAtOffset,
+  lineStarts,
+  tokenizeJsonLine,
+  updateLineStarts,
+} from '@/lib/jsonHighlight';
 
 const OVERSCAN = 8;
 
@@ -20,6 +25,7 @@ export type EditorHandle = {
   getText: () => string;
   selectionStart: number;
   selectionEnd: number;
+  getCursor: () => { line: number; column: number; selected: number };
   setSelectionRange: (start: number, end: number) => void;
 };
 
@@ -54,6 +60,7 @@ const VirtualEditorInner = forwardRef<EditorHandle, Props>(function VirtualEdito
   const textRef = useRef(documentText);
   const startsRef = useRef(lineStarts(documentText));
   const pendingEdit = useRef<Edit | null>(null);
+  const scrollFrameRef = useRef<number | null>(null);
   const metricsRef = useRef({ lineHeight: 23.8, characterWidth: 8.4 });
   const [viewport, setViewport] = useState<Viewport>({
     top: 0,
@@ -70,6 +77,16 @@ const VirtualEditorInner = forwardRef<EditorHandle, Props>(function VirtualEdito
     getText: () => textRef.current,
     get selectionStart() { return textareaRef.current?.selectionStart || 0; },
     get selectionEnd() { return textareaRef.current?.selectionEnd || 0; },
+    getCursor: () => {
+      const start = textareaRef.current?.selectionStart || 0;
+      const end = textareaRef.current?.selectionEnd || 0;
+      const lineIndex = lineIndexAtOffset(startsRef.current, start);
+      return {
+        line: lineIndex + 1,
+        column: start - startsRef.current[lineIndex] + 1,
+        selected: end - start,
+      };
+    },
     setSelectionRange: (start, end) => textareaRef.current?.setSelectionRange(start, end),
   }), []);
 
@@ -112,14 +129,33 @@ const VirtualEditorInner = forwardRef<EditorHandle, Props>(function VirtualEdito
 
   const measureViewport = useCallback((event?: UIEvent<HTMLTextAreaElement>) => {
     const textarea = event?.currentTarget || textareaRef.current;
-    if (!textarea) return;
-    setViewport({
-      top: textarea.scrollTop,
-      left: textarea.scrollLeft,
-      width: textarea.clientWidth,
-      height: textarea.clientHeight,
-      ...metricsRef.current,
+    if (!textarea || scrollFrameRef.current !== null) return;
+    scrollFrameRef.current = requestAnimationFrame(() => {
+      scrollFrameRef.current = null;
+      const current = textareaRef.current;
+      if (!current) return;
+      const next = {
+        top: current.scrollTop,
+        left: current.scrollLeft,
+        width: current.clientWidth,
+        height: current.clientHeight,
+        ...metricsRef.current,
+      };
+      setViewport((previous) => (
+        previous.top === next.top
+        && previous.left === next.left
+        && previous.width === next.width
+        && previous.height === next.height
+        && previous.lineHeight === next.lineHeight
+        && previous.characterWidth === next.characterWidth
+          ? previous
+          : next
+      ));
     });
+  }, []);
+
+  useEffect(() => () => {
+    if (scrollFrameRef.current !== null) cancelAnimationFrame(scrollFrameRef.current);
   }, []);
 
   const handleInput = (event: FormEvent<HTMLTextAreaElement>) => {

@@ -65,6 +65,17 @@ export function lineStarts(source: string) {
   return starts;
 }
 
+export function lineIndexAtOffset(starts: number[], offset: number) {
+  let low = 0;
+  let high = starts.length;
+  while (low < high) {
+    const middle = (low + high) >>> 1;
+    if (starts[middle] <= offset) low = middle + 1;
+    else high = middle;
+  }
+  return Math.max(0, low - 1);
+}
+
 export function updateLineStarts(
   previous: number[],
   source: string,
@@ -74,13 +85,18 @@ export function updateLineStarts(
 ) {
   const delta = nextEnd - editStart - (previousEnd - editStart);
   const next: number[] = [];
-  for (const start of previous) {
-    if (start <= editStart) next.push(start);
-    else if (start > previousEnd) next.push(start + delta);
+  let suffixIndex = 0;
+  while (suffixIndex < previous.length && previous[suffixIndex] <= editStart) {
+    next.push(previous[suffixIndex]);
+    suffixIndex += 1;
   }
+  while (suffixIndex < previous.length && previous[suffixIndex] <= previousEnd) suffixIndex += 1;
   for (let index = editStart; index < nextEnd; index += 1) {
     if (source.charCodeAt(index) === 10) next.push(index + 1);
   }
-  next.sort((left, right) => left - right);
-  return next.filter((start, index) => index === 0 || start !== next[index - 1]);
+  while (suffixIndex < previous.length) {
+    next.push(previous[suffixIndex] + delta);
+    suffixIndex += 1;
+  }
+  return next;
 }

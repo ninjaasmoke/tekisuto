@@ -19,6 +19,7 @@ declare global {
 const DRAFT_KEY = 'tekisuto:draft';
 const THEME_KEY = 'tekisuto:theme';
 const DRAFT_LIMIT = 5 * 1024 * 1024;
+const STATS_LIMIT = 1024 * 1024;
 const INTERACTIVE_LIMIT = 16 * 1024 * 1024;
 const FORMATS: Record<Exclude<Format, 'custom'>, { label: string; mime: string }> = {
   txt: { label: 'Plain text', mime: 'text/plain' },
@@ -124,7 +125,7 @@ export default function IndexPage() {
   const hasContent = text.length > 0;
 
   const stats = useMemo(() => {
-    if (text.length > INTERACTIVE_LIMIT) return { words: null };
+    if (text.length > STATS_LIMIT) return { words: null };
     const words = text.trim() ? text.trim().split(/\s+/).length : 0;
     return { words };
   }, [text]);
@@ -230,13 +231,7 @@ export default function IndexPage() {
   const updateCursor = () => {
     const editor = textareaRef.current;
     if (!editor) return;
-    const before = editor.getText().slice(0, editor.selectionStart);
-    const lines = before.split('\n');
-    setCursor({
-      line: lines.length,
-      column: (lines.at(-1)?.length || 0) + 1,
-      selected: editor.selectionEnd - editor.selectionStart,
-    });
+    setCursor(editor.getCursor());
   };
 
   useEffect(() => {
