@@ -3,9 +3,10 @@ const test = require('node:test');
 const { processJson } = require('../public/json-worker-core.js');
 
 test('formats and minifies JSON without evaluating content', async () => {
-  const source = '{"html":"<script>alert(1)</script>","number":9007199254740993}';
+  const source = '{"html":"<script>alert(1)</script>","number":9007199254740993,"empty":{}}';
   const formatted = await processJson(source, 'format');
   assert.equal(formatted.includes('<script>'), true);
+  assert.equal(formatted.includes('"empty": {}'), true);
   assert.equal(await processJson(formatted, 'minify'), source);
 });
 

@@ -95,7 +95,11 @@
           || (frame.type === 'object' ? frame.state === 'keyOrEnd' : frame.state === 'valueOrEnd');
         if (!mayClose) throw syntaxError('Unexpected closing bracket', index);
         stack.pop();
-        if (mode === 'format') append(`\n${indent()}`);
+        if (mode === 'format') {
+          const isEmpty = frame.state === 'keyOrEnd' || frame.state === 'valueOrEnd';
+          if (isEmpty) outputLength -= output.pop().length;
+          else append(`\n${indent()}`);
+        }
         append(character);
         index += 1;
       } else if (character === ':') {

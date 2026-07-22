@@ -347,7 +347,7 @@ export default function IndexPage() {
 
   const transformCsv = () => {
     try {
-      markChanged(normalizeCsv(text));
+      replaceDocument(normalizeCsv(textareaRef.current?.getText() ?? text));
       setMessage('CSV fields safely quoted');
     } catch (error) {
       setMessage(`Invalid CSV: ${(error as Error).message}`);
@@ -362,13 +362,14 @@ export default function IndexPage() {
       return;
     }
     const start = editor.selectionStart;
-    markChanged(`${text.slice(0, start)}${replace}${text.slice(editor.selectionEnd)}`);
+    const currentText = editor.getText();
+    replaceDocument(`${currentText.slice(0, start)}${replace}${currentText.slice(editor.selectionEnd)}`);
     requestAnimationFrame(() => editor.setSelectionRange(start, start + replace.length));
   };
 
   const replaceAll = () => {
     if (!find) return;
-    markChanged(text.split(find).join(replace));
+    replaceDocument((textareaRef.current?.getText() ?? text).split(find).join(replace));
     setMessage(`Replaced ${matches.length} match${matches.length === 1 ? '' : 'es'}`);
   };
 

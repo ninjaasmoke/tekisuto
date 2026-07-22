@@ -326,10 +326,6 @@ select:hover {
   will-change: transform;
 }
 
-.highlight-line {
-  height: 23.8px;
-}
-
 .json-key { color: #64d2ff; }
 .json-string { color: #a8d66d; }
 .json-number { color: #bf8cff; }
