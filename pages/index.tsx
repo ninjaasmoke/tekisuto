@@ -1,5 +1,6 @@
 import Head from 'next/head';
 import { ChangeEvent, DragEvent, KeyboardEvent, useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { EditorHandle, VirtualEditor } from '@/components/VirtualEditor';
 
 type Format = 'txt' | 'md' | 'json' | 'csv' | 'custom';
 type Theme = 'light' | 'dark';
@@ -17,6 +18,8 @@ declare global {
 
 const DRAFT_KEY = 'tekisuto:draft';
 const THEME_KEY = 'tekisuto:theme';
+const DRAFT_LIMIT = 5 * 1024 * 1024;
+const INTERACTIVE_LIMIT = 16 * 1024 * 1024;
 const FORMATS: Record<Exclude<Format, 'custom'>, { label: string; mime: string }> = {
   txt: { label: 'Plain text', mime: 'text/plain' },
   md: { label: 'Markdown', mime: 'text/markdown' },
@@ -98,12 +101,14 @@ function normalizeCsv(source: string) {
 
 export default function IndexPage() {
   const [text, setText] = useState('');
+  const [documentVersion, setDocumentVersion] = useState(0);
   const [fileName, setFileName] = useState('untitled.txt');
   const [format, setFormat] = useState<Format>('txt');
   const [handle, setHandle] = useState<FileHandle | null>(null);
   const [dirty, setDirty] = useState(false);
   const [draftSynced, setDraftSynced] = useState(true);
   const [theme, setTheme] = useState<Theme>('dark');
+  const [highlightJson, setHighlightJson] = useState(true);
   const [message, setMessage] = useState('');
   const [isDragging, setIsDragging] = useState(false);
   const [findOpen, setFindOpen] = useState(false);
@@ -111,18 +116,22 @@ export default function IndexPage() {
   const [replace, setReplace] = useState('');
   const [matchIndex, setMatchIndex] = useState(-1);
   const [cursor, setCursor] = useState({ line: 1, column: 1, selected: 0 });
-  const textareaRef = useRef<HTMLTextAreaElement>(null);
+  const textareaRef = useRef<EditorHandle>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const findInputRef = useRef<HTMLInputElement>(null);
+  const workerRef = useRef<Worker | null>(null);
+  const workerJobRef = useRef(0);
   const hasContent = text.length > 0;
 
   const stats = useMemo(() => {
+    if (text.length > INTERACTIVE_LIMIT) return { words: null };
     const words = text.trim() ? text.trim().split(/\s+/).length : 0;
     return { words };
   }, [text]);
 
   const matches = useMemo(() => {
     if (!find) return [];
+    if (text.length > INTERACTIVE_LIMIT) return [];
     const positions: number[] = [];
     let position = 0;
     while ((position = text.indexOf(find, position)) !== -1) {
@@ -132,17 +141,26 @@ export default function IndexPage() {
     return positions;
   }, [find, text]);
 
-  const markChanged = (nextText: string) => {
+  const markChanged = useCallback((nextText: string) => {
     setText(nextText);
     setDirty(true);
     setDraftSynced(false);
     setMessage('');
-  };
+  }, []);
+
+  const replaceDocument = useCallback((nextText: string) => {
+    setText(nextText);
+    setDocumentVersion((version) => version + 1);
+    setDirty(true);
+    setDraftSynced(false);
+    setMessage('');
+  }, []);
 
   const loadFile = useCallback(async (file: File, nextHandle: FileHandle | null = null) => {
     if (dirty && !window.confirm('Discard unsaved changes and open another file?')) return;
     const contents = await file.text();
     setText(contents);
+    setDocumentVersion((version) => version + 1);
     setFileName(file.name);
     setFormat(extensionOf(file.name));
     setHandle(nextHandle);
@@ -168,7 +186,8 @@ export default function IndexPage() {
   }, [loadFile]);
 
   const save = useCallback(async (saveAs = false) => {
-    if (!text) return;
+    const currentText = textareaRef.current?.getText() ?? text;
+    if (!currentText) return;
     const name = safeName(fileName, format);
     const mime = format === 'custom' ? 'text/plain' : FORMATS[format].mime;
     try {
@@ -181,12 +200,12 @@ export default function IndexPage() {
       }
       if (target) {
         const writable = await target.createWritable();
-        await writable.write(text);
+        await writable.write(currentText);
         await writable.close();
         setHandle(target);
         setFileName(target.name);
       } else {
-        downloadFile(text, name, mime);
+        downloadFile(currentText, name, mime);
         setFileName(name);
       }
       setDirty(false);
@@ -211,7 +230,7 @@ export default function IndexPage() {
   const updateCursor = () => {
     const editor = textareaRef.current;
     if (!editor) return;
-    const before = text.slice(0, editor.selectionStart);
+    const before = editor.getText().slice(0, editor.selectionStart);
     const lines = before.split('\n');
     setCursor({
       line: lines.length,
@@ -229,6 +248,7 @@ export default function IndexPage() {
       try {
         const parsed = JSON.parse(draft) as { text: string; fileName: string };
         setText(parsed.text || '');
+        setDocumentVersion((version) => version + 1);
         setFileName(parsed.fileName || 'untitled.txt');
         setFormat(extensionOf(parsed.fileName || 'untitled.txt'));
         setDirty(Boolean(parsed.text));
@@ -246,6 +266,12 @@ export default function IndexPage() {
 
   useEffect(() => {
     if (draftSynced) return;
+    if (text.length > DRAFT_LIMIT) {
+      localStorage.removeItem(DRAFT_KEY);
+      setDraftSynced(true);
+      setMessage('Draft autosave disabled above 5 MiB; save the file directly.');
+      return;
+    }
     const timer = window.setTimeout(() => {
       localStorage.setItem(DRAFT_KEY, JSON.stringify({ text, fileName }));
       setDraftSynced(true);
@@ -288,14 +314,35 @@ export default function IndexPage() {
     if (matchIndex >= matches.length) setMatchIndex(-1);
   }, [matchIndex, matches.length]);
 
-  const transformJson = (spaces?: number) => {
-    try {
-      const output = JSON.stringify(JSON.parse(text), null, spaces);
-      markChanged(output);
-      setMessage(spaces ? 'JSON formatted' : 'JSON minified');
-    } catch (error) {
-      setMessage(`Invalid JSON: ${(error as Error).message}`);
-    }
+  useEffect(() => () => workerRef.current?.terminate(), []);
+
+  const processJson = (mode: 'validate' | 'format' | 'minify') => {
+    const source = textareaRef.current?.getText() ?? text;
+    workerRef.current?.terminate();
+    const worker = new Worker('/json.worker.js');
+    const id = workerJobRef.current + 1;
+    workerJobRef.current = id;
+    workerRef.current = worker;
+    setMessage(`${mode === 'validate' ? 'Validating' : 'Formatting'} JSON…`);
+    worker.onmessage = (event: MessageEvent<{ id: number; ok: boolean; output?: string; error?: string }>) => {
+      if (event.data.id !== workerJobRef.current) return;
+      worker.terminate();
+      workerRef.current = null;
+      if (!event.data.ok) {
+        setMessage(`Invalid JSON: ${event.data.error}`);
+      } else if (mode === 'validate') {
+        setMessage('Valid JSON');
+      } else {
+        replaceDocument(event.data.output || '');
+        setMessage(mode === 'format' ? 'JSON formatted' : 'JSON minified');
+      }
+    };
+    worker.onerror = () => {
+      if (id === workerJobRef.current) setMessage('JSON processing failed. The document was not changed.');
+      worker.terminate();
+      workerRef.current = null;
+    };
+    worker.postMessage({ id, mode, source });
   };
 
   const transformCsv = () => {
@@ -336,9 +383,11 @@ export default function IndexPage() {
   const onEditorKeyDown = (event: KeyboardEvent<HTMLTextAreaElement>) => {
     if (event.key === 'Tab') {
       event.preventDefault();
-      const editor = event.currentTarget;
+      const editor = textareaRef.current;
+      if (!editor) return;
+      const currentText = editor.getText();
       const start = editor.selectionStart;
-      markChanged(`${text.slice(0, start)}  ${text.slice(editor.selectionEnd)}`);
+      replaceDocument(`${currentText.slice(0, start)}  ${currentText.slice(editor.selectionEnd)}`);
       requestAnimationFrame(() => editor.setSelectionRange(start + 2, start + 2));
     }
   };
@@ -354,6 +403,7 @@ export default function IndexPage() {
     if (dirty && !window.confirm('Discard your unsaved changes and clear this draft?')) return;
     localStorage.removeItem(DRAFT_KEY);
     setText('');
+    setDocumentVersion((version) => version + 1);
     setFileName('untitled.txt');
     setFormat('txt');
     setHandle(null);
@@ -411,8 +461,10 @@ export default function IndexPage() {
               <div className="menu-panel">
                 <button onClick={() => setFindOpen(true)}>Find &amp; replace</button>
                 <button onClick={() => void save(true)} disabled={!hasContent}>Save as…</button>
-                {format === 'json' && <button onClick={() => transformJson(2)} disabled={!hasContent}>Format JSON</button>}
-                {format === 'json' && <button onClick={() => transformJson()} disabled={!hasContent}>Minify JSON</button>}
+                {format === 'json' && <button onClick={() => setHighlightJson((enabled) => !enabled)}>{highlightJson ? 'Disable' : 'Enable'} highlighting</button>}
+                {format === 'json' && <button onClick={() => processJson('validate')} disabled={!hasContent}>Validate JSON</button>}
+                {format === 'json' && <button onClick={() => processJson('format')} disabled={!hasContent}>Format JSON</button>}
+                {format === 'json' && <button onClick={() => processJson('minify')} disabled={!hasContent}>Minify JSON</button>}
                 {format === 'csv' && <button onClick={transformCsv} disabled={!hasContent}>Quote CSV fields</button>}
                 <button onClick={clearDraft}>Clear draft</button>
               </div>
@@ -444,18 +496,14 @@ export default function IndexPage() {
         )}
 
         <section className="editor-wrap">
-          <textarea
+          <VirtualEditor
             ref={textareaRef}
-            className="editor"
-            aria-label="File contents"
-            value={text}
-            onChange={(event) => markChanged(event.target.value)}
+            documentText={text}
+            documentVersion={documentVersion}
+            highlight={format === 'json' && highlightJson}
+            onChange={markChanged}
             onKeyDown={onEditorKeyDown}
             onSelect={updateCursor}
-            onClick={updateCursor}
-            placeholder="Start typing, or drop a file here…"
-            autoFocus
-            spellCheck={false}
           />
           {isDragging && <div className="drop-zone">Drop to open</div>}
         </section>
@@ -469,7 +517,7 @@ export default function IndexPage() {
           <div className="status-group editor-stats">
             <span>Ln {cursor.line}, Col {cursor.column}</span>
             {cursor.selected > 0 && <span>{cursor.selected} selected</span>}
-            <span>{stats.words} words</span>
+            <span>{stats.words === null ? 'Large-file mode' : `${stats.words} words`}</span>
           </div>
         </footer>
 

@@ -273,6 +273,12 @@ select:hover {
   background-color: var(--surface);
 }
 
+.virtual-editor {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+}
+
 .editor {
   width: 100%;
   height: 100%;
@@ -288,7 +294,52 @@ select:hover {
   font-size: 14px;
   line-height: 1.7;
   tab-size: 2;
+  white-space: pre;
+  overflow: auto;
 }
+
+.virtual-editor.is-highlighted .editor {
+  position: relative;
+  z-index: 1;
+  background: transparent;
+  color: transparent;
+}
+
+.virtual-editor.is-highlighted .editor::selection {
+  background: color-mix(in srgb, var(--accent) 35%, transparent);
+}
+
+.highlight-layer {
+  position: absolute;
+  z-index: 0;
+  top: 24px;
+  left: 28px;
+  min-width: max-content;
+  margin: 0;
+  color: var(--text);
+  font-family: "SFMono-Regular", "Cascadia Code", "Roboto Mono", Consolas, monospace;
+  font-size: 14px;
+  line-height: 1.7;
+  tab-size: 2;
+  white-space: pre;
+  pointer-events: none;
+  will-change: transform;
+}
+
+.highlight-line {
+  height: 23.8px;
+}
+
+.json-key { color: #64d2ff; }
+.json-string { color: #a8d66d; }
+.json-number { color: #bf8cff; }
+.json-literal { color: #ff9f0a; }
+.json-punctuation { color: var(--muted); }
+
+:root[data-theme='light'] .json-key { color: #0066b8; }
+:root[data-theme='light'] .json-string { color: #397300; }
+:root[data-theme='light'] .json-number { color: #7a3e9d; }
+:root[data-theme='light'] .json-literal { color: #a34a00; }
 
 .editor:focus-visible {
   outline: 0;
@@ -418,6 +469,12 @@ select:hover {
 
   .editor {
     padding: 18px;
+    font-size: 15px;
+  }
+
+  .highlight-layer {
+    top: 18px;
+    left: 18px;
     font-size: 15px;
   }
 

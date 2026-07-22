@@ -9,7 +9,7 @@ A fast, private browser-based text editor for opening, editing, and saving local
 - Download fallback for browsers without direct file access
 - TXT, Markdown, JSON, CSV, and custom file extensions
 - Local draft recovery and unsaved-change protection
-- JSON formatting and validation, safe CSV quoting, and find and replace
+- Viewport-only JSON syntax highlighting, cancellable worker-based formatting and validation, safe CSV quoting, and find and replace
 - Keyboard shortcuts, light and dark themes, and live document statistics
 
 ## Privacy and security
@@ -46,4 +46,10 @@ Run the project checks with:
 ```bash
 npm run lint
 npm run build
+npm test
 ```
+
+Run the generated 16 MiB JSON performance fixture with `npm run benchmark:json`. Override its size with
+`JSON_BENCHMARK_MIB`; the targets are sub-16 ms typing and visible-scroll work, sub-second opening/indexing,
+and non-blocking formatting and validation in the browser worker. JSON worker input is capped at 64 MiB and
+formatted output at 128 MiB; highlighting remains viewport-only beyond those limits.
