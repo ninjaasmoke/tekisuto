@@ -1,5 +1,5 @@
 import Head from 'next/head';
-import { ChangeEvent, DragEvent, KeyboardEvent, useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { ChangeEvent, DragEvent, KeyboardEvent, useCallback, useEffect, useRef, useState } from 'react';
 import { EditorHandle, VirtualEditor } from '@/components/VirtualEditor';
 
 type Format = 'txt' | 'md' | 'json' | 'csv' | 'custom';
@@ -16,11 +16,9 @@ declare global {
   }
 }
 
-const DRAFT_KEY = 'tekisuto:draft';
-const THEME_KEY = 'tekisuto:theme';
-const DRAFT_LIMIT = 5 * 1024 * 1024;
 const STATS_LIMIT = 1024 * 1024;
 const INTERACTIVE_LIMIT = 16 * 1024 * 1024;
+const ANALYSIS_DELAY = 250;
 const FORMATS: Record<Exclude<Format, 'custom'>, { label: string; mime: string }> = {
   txt: { label: 'Plain text', mime: 'text/plain' },
   md: { label: 'Markdown', mime: 'text/markdown' },
@@ -100,14 +98,26 @@ function normalizeCsv(source: string) {
     .join('\n');
 }
 
+function countMatches(source: string, needle: string) {
+  if (!needle || source.length > INTERACTIVE_LIMIT) return [];
+  const positions: number[] = [];
+  let position = 0;
+  while ((position = source.indexOf(needle, position)) !== -1) {
+    positions.push(position);
+    position += Math.max(needle.length, 1);
+  }
+  return positions;
+}
+
 export default function IndexPage() {
-  const [text, setText] = useState('');
+  const [documentText, setDocumentText] = useState('');
   const [documentVersion, setDocumentVersion] = useState(0);
   const [fileName, setFileName] = useState('untitled.txt');
   const [format, setFormat] = useState<Format>('txt');
   const [handle, setHandle] = useState<FileHandle | null>(null);
   const [dirty, setDirty] = useState(false);
-  const [draftSynced, setDraftSynced] = useState(true);
+  const [hasContent, setHasContent] = useState(false);
+  const [words, setWords] = useState<number | null>(0);
   const [theme, setTheme] = useState<Theme>('dark');
   const [highlightJson, setHighlightJson] = useState(true);
   const [message, setMessage] = useState('');
@@ -115,6 +125,7 @@ export default function IndexPage() {
   const [findOpen, setFindOpen] = useState(false);
   const [find, setFind] = useState('');
   const [replace, setReplace] = useState('');
+  const [matches, setMatches] = useState<number[]>([]);
   const [matchIndex, setMatchIndex] = useState(-1);
   const [cursor, setCursor] = useState({ line: 1, column: 1, selected: 0 });
   const textareaRef = useRef<EditorHandle>(null);
@@ -122,52 +133,50 @@ export default function IndexPage() {
   const findInputRef = useRef<HTMLInputElement>(null);
   const workerRef = useRef<Worker | null>(null);
   const workerJobRef = useRef(0);
-  const hasContent = text.length > 0;
+  const analysisTimerRef = useRef<number | null>(null);
+  const findRef = useRef(find);
+  findRef.current = find;
 
-  const stats = useMemo(() => {
-    if (text.length > STATS_LIMIT) return { words: null };
-    const words = text.trim() ? text.trim().split(/\s+/).length : 0;
-    return { words };
-  }, [text]);
+  const currentText = useCallback(() => textareaRef.current?.getText() ?? documentText, [documentText]);
 
-  const matches = useMemo(() => {
-    if (!find) return [];
-    if (text.length > INTERACTIVE_LIMIT) return [];
-    const positions: number[] = [];
-    let position = 0;
-    while ((position = text.indexOf(find, position)) !== -1) {
-      positions.push(position);
-      position += Math.max(find.length, 1);
-    }
-    return positions;
-  }, [find, text]);
-
-  const markChanged = useCallback((nextText: string) => {
-    setText(nextText);
-    setDirty(true);
-    setDraftSynced(false);
-    setMessage('');
+  const analyze = useCallback(() => {
+    const source = textareaRef.current?.getText() ?? '';
+    setHasContent(source.length > 0);
+    setWords(source.length > STATS_LIMIT ? null : (source.trim() ? source.trim().split(/\s+/).length : 0));
+    setMatches(countMatches(source, findRef.current));
   }, []);
 
+  const scheduleAnalysis = useCallback(() => {
+    if (analysisTimerRef.current !== null) return;
+    analysisTimerRef.current = window.setTimeout(() => {
+      analysisTimerRef.current = null;
+      analyze();
+    }, ANALYSIS_DELAY);
+  }, [analyze]);
+
+  const markChanged = useCallback((nextText: string) => {
+    setDirty(true);
+    setHasContent(nextText.length > 0);
+    setMessage('');
+    scheduleAnalysis();
+  }, [scheduleAnalysis]);
+
   const replaceDocument = useCallback((nextText: string) => {
-    setText(nextText);
+    setDocumentText(nextText);
     setDocumentVersion((version) => version + 1);
     setDirty(true);
-    setDraftSynced(false);
     setMessage('');
   }, []);
 
   const loadFile = useCallback(async (file: File, nextHandle: FileHandle | null = null) => {
     if (dirty && !window.confirm('Discard unsaved changes and open another file?')) return;
     const contents = await file.text();
-    setText(contents);
+    setDocumentText(contents);
     setDocumentVersion((version) => version + 1);
     setFileName(file.name);
     setFormat(extensionOf(file.name));
     setHandle(nextHandle);
     setDirty(false);
-    setDraftSynced(true);
-    localStorage.removeItem(DRAFT_KEY);
     setMessage(`Opened ${file.name}`);
     requestAnimationFrame(() => textareaRef.current?.focus());
   }, [dirty]);
@@ -187,8 +196,8 @@ export default function IndexPage() {
   }, [loadFile]);
 
   const save = useCallback(async (saveAs = false) => {
-    const currentText = textareaRef.current?.getText() ?? text;
-    if (!currentText) return;
+    const source = textareaRef.current?.getText() ?? '';
+    if (!source) return;
     const name = safeName(fileName, format);
     const mime = format === 'custom' ? 'text/plain' : FORMATS[format].mime;
     try {
@@ -201,22 +210,20 @@ export default function IndexPage() {
       }
       if (target) {
         const writable = await target.createWritable();
-        await writable.write(currentText);
+        await writable.write(source);
         await writable.close();
         setHandle(target);
         setFileName(target.name);
       } else {
-        downloadFile(currentText, name, mime);
+        downloadFile(source, name, mime);
         setFileName(name);
       }
       setDirty(false);
-      setDraftSynced(true);
-      localStorage.removeItem(DRAFT_KEY);
       setMessage(`Saved ${target?.name || name}`);
     } catch (error) {
-      if ((error as DOMException).name !== 'AbortError') setMessage('Save failed. Your draft is still safe.');
+      if ((error as DOMException).name !== 'AbortError') setMessage('Save failed. The document was not changed.');
     }
-  }, [fileName, format, handle, text]);
+  }, [fileName, format, handle]);
 
   const selectMatch = useCallback((direction: 1 | -1 = 1) => {
     if (!matches.length || !find) return;
@@ -235,44 +242,20 @@ export default function IndexPage() {
   };
 
   useEffect(() => {
-    const storedTheme = localStorage.getItem(THEME_KEY) as Theme | null;
-    const preferred = window.matchMedia('(prefers-color-scheme: light)').matches ? 'light' : 'dark';
-    setTheme(storedTheme || preferred);
-    const draft = localStorage.getItem(DRAFT_KEY);
-    if (draft) {
-      try {
-        const parsed = JSON.parse(draft) as { text: string; fileName: string };
-        setText(parsed.text || '');
-        setDocumentVersion((version) => version + 1);
-        setFileName(parsed.fileName || 'untitled.txt');
-        setFormat(extensionOf(parsed.fileName || 'untitled.txt'));
-        setDirty(Boolean(parsed.text));
-        setMessage('Recovered your local draft');
-      } catch {
-        localStorage.removeItem(DRAFT_KEY);
-      }
-    }
+    setTheme(window.matchMedia('(prefers-color-scheme: light)').matches ? 'light' : 'dark');
   }, []);
 
   useEffect(() => {
     document.documentElement.dataset.theme = theme;
-    localStorage.setItem(THEME_KEY, theme);
   }, [theme]);
 
   useEffect(() => {
-    if (draftSynced) return;
-    if (text.length > DRAFT_LIMIT) {
-      localStorage.removeItem(DRAFT_KEY);
-      setDraftSynced(true);
-      setMessage('Draft autosave disabled above 5 MiB; save the file directly.');
-      return;
-    }
-    const timer = window.setTimeout(() => {
-      localStorage.setItem(DRAFT_KEY, JSON.stringify({ text, fileName }));
-      setDraftSynced(true);
-    }, 450);
-    return () => window.clearTimeout(timer);
-  }, [draftSynced, fileName, text]);
+    analyze();
+  }, [analyze, documentVersion, find]);
+
+  useEffect(() => () => {
+    if (analysisTimerRef.current !== null) window.clearTimeout(analysisTimerRef.current);
+  }, []);
 
   useEffect(() => {
     const onKeyDown = (event: globalThis.KeyboardEvent) => {
@@ -312,7 +295,7 @@ export default function IndexPage() {
   useEffect(() => () => workerRef.current?.terminate(), []);
 
   const processJson = (mode: 'validate' | 'format' | 'minify') => {
-    const source = textareaRef.current?.getText() ?? text;
+    const source = currentText();
     workerRef.current?.terminate();
     const worker = new Worker('/json.worker.js');
     const id = workerJobRef.current + 1;
@@ -342,7 +325,7 @@ export default function IndexPage() {
 
   const transformCsv = () => {
     try {
-      replaceDocument(normalizeCsv(textareaRef.current?.getText() ?? text));
+      replaceDocument(normalizeCsv(currentText()));
       setMessage('CSV fields safely quoted');
     } catch (error) {
       setMessage(`Invalid CSV: ${(error as Error).message}`);
@@ -352,7 +335,7 @@ export default function IndexPage() {
   const replaceCurrent = () => {
     const editor = textareaRef.current;
     if (!editor || !find) return;
-    if (text.slice(editor.selectionStart, editor.selectionEnd) !== find) {
+    if (editor.getText().slice(editor.selectionStart, editor.selectionEnd) !== find) {
       selectMatch(1);
       return;
     }
@@ -364,7 +347,7 @@ export default function IndexPage() {
 
   const replaceAll = () => {
     if (!find) return;
-    replaceDocument((textareaRef.current?.getText() ?? text).split(find).join(replace));
+    replaceDocument(currentText().split(find).join(replace));
     setMessage(`Replaced ${matches.length} match${matches.length === 1 ? '' : 'es'}`);
   };
 
@@ -395,17 +378,15 @@ export default function IndexPage() {
     if (file) await loadFile(file);
   };
 
-  const clearDraft = () => {
-    if (dirty && !window.confirm('Discard your unsaved changes and clear this draft?')) return;
-    localStorage.removeItem(DRAFT_KEY);
-    setText('');
+  const clearDocument = () => {
+    if (dirty && !window.confirm('Discard your unsaved changes and clear this document?')) return;
+    setDocumentText('');
     setDocumentVersion((version) => version + 1);
     setFileName('untitled.txt');
     setFormat('txt');
     setHandle(null);
     setDirty(false);
-    setDraftSynced(true);
-    setMessage('Draft cleared');
+    setMessage('Document cleared');
     textareaRef.current?.focus();
   };
 
@@ -439,7 +420,6 @@ export default function IndexPage() {
                 setFileName(event.target.value);
                 setFormat(extensionOf(event.target.value));
                 setDirty(true);
-                setDraftSynced(false);
               }}
             />
             <select aria-label="File type" value={format} onChange={(event) => changeFormat(event.target.value as Format)}>
@@ -462,7 +442,7 @@ export default function IndexPage() {
                 {format === 'json' && <button onClick={() => processJson('format')} disabled={!hasContent}>Format JSON</button>}
                 {format === 'json' && <button onClick={() => processJson('minify')} disabled={!hasContent}>Minify JSON</button>}
                 {format === 'csv' && <button onClick={transformCsv} disabled={!hasContent}>Quote CSV fields</button>}
-                <button onClick={clearDraft}>Clear draft</button>
+                <button onClick={clearDocument}>Clear document</button>
               </div>
             </details>
             <button className="theme-toggle" onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')} aria-label={`Use ${theme === 'dark' ? 'light' : 'dark'} theme`}>
@@ -494,7 +474,7 @@ export default function IndexPage() {
         <section className="editor-wrap">
           <VirtualEditor
             ref={textareaRef}
-            documentText={text}
+            documentText={documentText}
             documentVersion={documentVersion}
             highlight={format === 'json' && highlightJson}
             onChange={markChanged}
@@ -507,13 +487,12 @@ export default function IndexPage() {
         <footer className="statusbar">
           <div className="status-group">
             <span className={`save-state${dirty ? ' unsaved' : ''}`}><i />{dirty ? 'Unsaved changes' : 'Saved'}</span>
-            {!draftSynced && <span>Saving draft…</span>}
             {message && <span className="message" role="status">{message}</span>}
           </div>
           <div className="status-group editor-stats">
             <span>Ln {cursor.line}, Col {cursor.column}</span>
             {cursor.selected > 0 && <span>{cursor.selected} selected</span>}
-            <span>{stats.words === null ? 'Large-file mode' : `${stats.words} words`}</span>
+            <span>{words === null ? 'Large-file mode' : `${words} words`}</span>
           </div>
         </footer>
 

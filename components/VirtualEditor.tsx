@@ -181,7 +181,7 @@ const VirtualEditorInner = forwardRef<EditorHandle, Props>(function VirtualEdito
     allSelectedRef.current = false;
     setAllSelected(false);
     textRef.current = nextText;
-    setPaintVersion((version) => version + 1);
+    if (highlight) setPaintVersion((version) => version + 1);
     onChange(nextText);
   };
 
